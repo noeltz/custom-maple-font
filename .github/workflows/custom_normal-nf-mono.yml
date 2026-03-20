@@ -1,4 +1,4 @@
-name: Custom Build
+name: Maple Mono Normal Nerd Font Mono Build
 
 on:
   workflow_dispatch:
@@ -11,7 +11,7 @@ on:
       normal:
         description: 'Remove opinionated features (add "--normal" to build args)'
         required: false
-        default: false
+        default: true
         type: boolean
       no_liga:
         description: 'Remove ligatures (add "--no-liga" to build args)'
@@ -35,7 +35,7 @@ on:
       nerd_font:
         description: 'Nerd Font icon mode: default("--nf"), mono("--nf-mono"), proportional("--nf-propo")'
         required: false
-        default: default
+        default: mono
         type: choice
         options:
           - default
