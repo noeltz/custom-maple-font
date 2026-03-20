@@ -20,8 +20,8 @@ jobs:
     strategy:
       matrix:
         config: [
-          {name: Mono, args: "--normal --liga --nf-mono"},
-          {name: Propo, args: "--normal --liga --nf-propo"}
+          {name: mono, args: "--normal --liga --nf-mono"},
+          {name: propo, args: "--normal --liga --nf-propo"}
         ]
     runs-on: ubuntu-latest
     steps:
@@ -39,19 +39,19 @@ jobs:
       run: pip install -r requirements.txt
 
     - name: Build fonts
-      # Removed --archive. Note: logs show output goes to 'fonts/' folder
       run: |
         python build.py --ttf-only --hinted ${{ matrix.config.args }} ${{ github.event.inputs.build_args }}
 
     - name: Rename fonts to avoid collisions
-      # We check the 'fonts/' directory. 
-      # We move all .ttf files from subdirectories into a flat 'upload' folder
-      # and prefix them with the matrix name to ensure uniqueness.
       run: |
-        mkdir upload
-        find fonts/ -name "*.ttf" -exec cp {} upload/${{ matrix.config.name }}_{} +
-        # Cleanup path slashes in filenames if any
-        cd upload && for f in fonts_*; do mv "$f" "${f//fonts_/}"; done
+        mkdir -p upload
+        # Use -exec with \; to process files individually, allowing us to prefix the filename
+        find fonts/ -name "*.ttf" -exec bash -c '
+          for file do
+            filename=$(basename "$file")
+            cp "$file" "upload/${{ matrix.config.name }}_$filename"
+          done
+        ' bash {} +
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
@@ -64,8 +64,6 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
-    - uses: actions/checkout@v4
-
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
