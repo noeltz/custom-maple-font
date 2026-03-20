@@ -20,8 +20,8 @@ jobs:
     strategy:
       matrix:
         config: [
-          {name: mono, args: "--normal --liga --nf-mono"},
-          {name: propo, args: "--normal --liga --nf-propo"}
+          {name: Mono, args: "--normal --liga --nf-mono"},
+          {name: Propo, args: "--normal --liga --nf-propo"}
         ]
     runs-on: ubuntu-latest
     steps:
@@ -39,43 +39,44 @@ jobs:
       run: pip install -r requirements.txt
 
     - name: Build fonts
-      # Removed --archive. build.py will now output raw TTFs to the 'dist' or 'out' folder.
-      # Based on your logs, we'll assume the output is in 'out/'
+      # Removed --archive. Note: logs show output goes to 'fonts/' folder
       run: |
         python build.py --ttf-only --hinted ${{ matrix.config.args }} ${{ github.event.inputs.build_args }}
 
-    - name: Rename fonts to include variant
-      # This finds all TTFs in the 'out' directory and renames them 
-      # from 'MapleMono-Regular.ttf' to 'MapleMono-NF-mono-Regular.ttf'
+    - name: Rename fonts to avoid collisions
+      # We check the 'fonts/' directory. 
+      # We move all .ttf files from subdirectories into a flat 'upload' folder
+      # and prefix them with the matrix name to ensure uniqueness.
       run: |
-        find out/ -name "*.ttf" -exec bash -c 'dir=$(dirname "$1"); base=$(basename "$1"); mv "$1" "$dir/MapleMono-NF-${{ matrix.config.name }}-${base#*-}"' -- {} \;
+        mkdir upload
+        find fonts/ -name "*.ttf" -exec cp {} upload/${{ matrix.config.name }}_{} +
+        # Cleanup path slashes in filenames if any
+        cd upload && for f in fonts_*; do mv "$f" "${f//fonts_/}"; done
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: fonts-${{ matrix.config.name }}
-        path: out/**/*.ttf
+        name: release-${{ matrix.config.name }}
+        path: upload/*.ttf
 
   create-release:
     needs: build
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
     steps:
     - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
-        pattern: fonts-*
+        pattern: release-*
         path: all-fonts
         merge-multiple: true
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: all-fonts/**/*.ttf
+        files: all-fonts/*.ttf
         draft: false
         prerelease: false
         generate_release_notes: true
