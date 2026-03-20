@@ -70,7 +70,7 @@ jobs:
           find fonts/archive/ -name "*.zip" -exec bash -c '
             for file do
               filename=$(basename "$file")
-              cp "$file" "fonts/archive/NFM_$filename"
+              mv "$file" "fonts/archive/NFM_$filename"
             done
           ' bash {} +
       - name: Rename fonts sha256 to avoid collisions for NFM
@@ -80,7 +80,7 @@ jobs:
           find fonts/archive/ -name "*.sha256" -exec bash -c '
             for file do
               filename=$(basename "$file")
-              cp "$file" "fonts/archive/NFM_$filename"
+              mv "$file" "fonts/archive/NFM_$filename"
             done
           ' bash {} +
 
@@ -112,7 +112,7 @@ jobs:
           find fonts/archive/ -name "*.zip" -exec bash -c '
             for file do
               filename=$(basename "$file")
-              cp "$file" "fonts/archive/NFP_$filename"
+              mv "$file" "fonts/archive/NFP_$filename"
             done
           ' bash {} +
       - name: Rename fonts sha256 to avoid collisions for NFP
@@ -122,7 +122,7 @@ jobs:
           find fonts/archive/ -name "*.sha256" -exec bash -c '
             for file do
               filename=$(basename "$file")
-              cp "$file" "fonts/archive/NFP_$filename"
+              mv "$file" "fonts/archive/NFP_$filename"
             done
           ' bash {} +
         
