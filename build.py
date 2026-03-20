@@ -1185,6 +1185,10 @@ def build_nf_by_prebuild_nerd_font(
     if suffix:
         suffix = "-" + suffix
 
+    nf_type = font_config.get_nf_suffix() # Returns "Mono" or "Propo"
+    if nf_type:
+        suffix += f"-{nf_type}"
+    
     nf_base_font_path = f"{build_option.src_dir}/MapleMono-NF-Base{suffix}.ttf"
     tmp_target_path = None
     if font_config.get_width_name():
