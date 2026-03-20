@@ -1,56 +1,7 @@
-name: Maple Mono Normal Nerd Font Mono Build
+name: Normal Nerd Font Mono/Propo Build
 
 on:
   workflow_dispatch:
-    inputs:
-      cn:
-        description: 'Include Chinese version (add "--cn" to build args)'
-        required: false
-        default: false
-        type: boolean
-      normal:
-        description: 'Remove opinionated features (add "--normal" to build args)'
-        required: false
-        default: true
-        type: boolean
-      no_liga:
-        description: 'Remove ligatures (add "--no-liga" to build args)'
-        required: false
-        default: false
-        type: boolean
-      no_hinted:
-        description: 'Build unhinted font (add "--no-hinted" to build args)'
-        required: false
-        default: false
-        type: boolean
-      width:
-        description: 'Glyph width mode (add "--width <default|narrow|slim>" to build args)'
-        required: false
-        default: default
-        type: choice
-        options:
-          - default
-          - narrow
-          - slim
-      nerd_font:
-        description: 'Nerd Font icon mode: default("--nf"), mono("--nf-mono"), proportional("--nf-propo")'
-        required: false
-        default: mono
-        type: choice
-        options:
-          - default
-          - mono
-          - proportional
-      feat:
-        description: 'Enable features, split by `,`, e.g. "cv01,ss02" (add "--feat feat1,feat2" to build args)'
-        required: false
-        default: ''
-        type: string
-      build_args:
-        description: 'Other args for build.py'
-        required: false
-        default: ''
-        type: string
 
 permissions:
   contents: write
@@ -93,40 +44,14 @@ jobs:
 
       - name: Run custom script
         run: |
-          build_args="--archive"
-          if [ "${{ github.event.inputs.cn }}" == "true" ]; then
-            build_args="$build_args --cn"
-          fi
-          if [ "${{ github.event.inputs.normal }}" == "true" ]; then
-            build_args="$build_args --normal"
-          fi
-          if [ "${{ github.event.inputs.no_liga }}" == "true" ]; then
-            build_args="$build_args --no-liga"
-          fi
-          if [ "${{ github.event.inputs.no_hinted }}" == "true" ]; then
-            build_args="$build_args --no-hinted"
-          fi
-          if [ "${{ github.event.inputs.width }}" != "default" ]; then
-            build_args="$build_args --width ${{ github.event.inputs.width }}"
-          fi
-          case "${{ github.event.inputs.nerd_font }}" in
-            default)
-              build_args="$build_args --nf"
-              ;;
-            mono)
-              build_args="$build_args --nf-mono"
-              ;;
-            proportional)
-              build_args="$build_args --nf-propo"
-              ;;
-          esac
+          build_args="--archive --hinted --ttf-only --normal --liga --nf-mono --nf-propo"
           if [ -n "${{ github.event.inputs.feat }}" ]; then
             build_args="$build_args --feat ${{ github.event.inputs.feat }}"
           fi
           if [ -n "${{ github.event.inputs.build_args }}" ]; then
             build_args="$build_args ${{ github.event.inputs.build_args }}"
           fi
-
+          
           echo "BUILD_ARGS=$build_args" >> $GITHUB_ENV
           python build.py $build_args
         continue-on-error: true
