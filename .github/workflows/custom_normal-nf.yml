@@ -42,20 +42,19 @@ jobs:
             fontforge --version
           fi
 
-      - name: Run custom script
+      - name: Run custom script for NFM
         run: |
-          build_args="--archive --hinted --ttf-only --normal --liga --nf-mono --nf-propo"
+          build_args="--archive --hinted --ttf-only --normal --liga --nf-mono"
           if [ -n "${{ github.event.inputs.feat }}" ]; then
             build_args="$build_args --feat ${{ github.event.inputs.feat }}"
           fi
           if [ -n "${{ github.event.inputs.build_args }}" ]; then
             build_args="$build_args ${{ github.event.inputs.build_args }}"
-          fi
-          
+          fi          
           echo "BUILD_ARGS=$build_args" >> $GITHUB_ENV
           python build.py $build_args
         continue-on-error: true
-      - id: check_issue
+      - id: check_issue_nfm
         name: Check issue feature file
         run: |
           if [ -f fonts/issue.fea ]
@@ -63,13 +62,82 @@ jobs:
             echo 'exists=true' >> $GITHUB_OUTPUT
           else
             echo 'exists=false' >> $GITHUB_OUTPUT
+          fi          
+      - name: Rename fonts zip to avoid collisions for NFM
+        run: |
+          mkdir -p upload
+          # Use -exec with \; to process files individually, allowing us to prefix the filename
+          find fonts/archive/ -name "*.zip" -exec bash -c '
+            for file do
+              filename=$(basename "$file")
+              cp "$file" "fonts/archive/NFM_$filename"
+            done
+          ' bash {} +
+      - name: Rename fonts sha256 to avoid collisions for NFM
+        run: |
+          mkdir -p upload
+          # Use -exec with \; to process files individually, allowing us to prefix the filename
+          find fonts/archive/ -name "*.sha256" -exec bash -c '
+            for file do
+              filename=$(basename "$file")
+              cp "$file" "fonts/archive/NFM_$filename"
+            done
+          ' bash {} +
+
+      - name: Run custom script for NFP
+        run: |
+          build_args="--archive --hinted --ttf-only --normal --liga --nf-propo"
+          if [ -n "${{ github.event.inputs.feat }}" ]; then
+            build_args="$build_args --feat ${{ github.event.inputs.feat }}"
           fi
-      - name: Upload issue artifact
-        if: ${{ steps.check_issue.outputs.exists == 'true' }}
+          if [ -n "${{ github.event.inputs.build_args }}" ]; then
+            build_args="$build_args ${{ github.event.inputs.build_args }}"
+          fi          
+          echo "BUILD_ARGS=$build_args" >> $GITHUB_ENV
+          python build.py $build_args
+        continue-on-error: true
+      - id: check_issue_nfp
+        name: Check issue feature file
+        run: |
+          if [ -f fonts/issue.fea ]
+          then
+            echo 'exists=true' >> $GITHUB_OUTPUT
+          else
+            echo 'exists=false' >> $GITHUB_OUTPUT
+          fi          
+      - name: Rename fonts zip to avoid collisions for NFP
+        run: |
+          mkdir -p upload
+          # Use -exec with \; to process files individually, allowing us to prefix the filename
+          find fonts/archive/ -name "*.zip" -exec bash -c '
+            for file do
+              filename=$(basename "$file")
+              cp "$file" "fonts/archive/NFP_$filename"
+            done
+          ' bash {} +
+      - name: Rename fonts sha256 to avoid collisions for NFP
+        run: |
+          mkdir -p upload
+          # Use -exec with \; to process files individually, allowing us to prefix the filename
+          find fonts/archive/ -name "*.sha256" -exec bash -c '
+            for file do
+              filename=$(basename "$file")
+              cp "$file" "fonts/archive/NFP_$filename"
+            done
+          ' bash {} +
+        
+      - name: Upload issue artifact NFM
+        if: ${{ steps.check_issue_nfm.outputs.exists == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: issue-fea-file
-          path: fonts/issue.fea
+          name: issue-fea-file-nfm
+          path: fonts/issue-nfm.fea
+      - name: Upload issue artifact NFP
+        if: ${{ steps.check_issue_nfp.outputs.exists == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-fea-file-nfp
+          path: fonts/issue-nfp.fea
       - name: Create release
         run: |
           if [ ! -d "fonts/archive" ]; then
@@ -84,6 +152,6 @@ jobs:
           echo "\`\`\`" >> NOTES
           python build.py $BUILD_ARGS --dry | sed '1s/^/font_config: /' >> NOTES
           echo "\`\`\`" >> NOTES
-          gh release create "v$(date +%s)" fonts/archive/*.* --notes-file NOTES
+          gh release create "v$(date +%s)" fonts/archive/*.*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
