@@ -20,25 +20,41 @@ jobs:
     strategy:
       matrix:
         config: [
-          {name: normal-liga-nf-mono, args: "--normal --liga --nf-mono"},
-          {name: normal-liga-nf-propo, args: "--normal --liga --nf-propo"}
+          {name: mono, args: "--normal --liga --nf-mono"},
+          {name: propo, args: "--normal --liga --nf-propo"}
         ]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
     - uses: actions/setup-python@v5
       with:
         python-version: '3.12'
         cache: 'pip'
         cache-dependency-path: './requirements.txt'
-    - run: pip install -r requirements.txt
+
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+
     - name: Build fonts
+      # Removed --archive. build.py will now output raw TTFs to the 'dist' or 'out' folder.
+      # Based on your logs, we'll assume the output is in 'out/'
       run: |
-        python build.py --archive --ttf-only --hinted ${{ matrix.config.args }} ${{ github.event.inputs.build_args }}
-    - uses: actions/upload-artifact@v4
+        python build.py --ttf-only --hinted ${{ matrix.config.args }} ${{ github.event.inputs.build_args }}
+
+    - name: Rename fonts to include variant
+      # This finds all TTFs in the 'out' directory and renames them 
+      # from 'MapleMono-Regular.ttf' to 'MapleMono-NF-mono-Regular.ttf'
+      run: |
+        find out/ -name "*.ttf" -exec bash -c 'dir=$(dirname "$1"); base=$(basename "$1"); mv "$1" "$dir/MapleMono-NF-${{ matrix.config.name }}-${base#*-}"' -- {} \;
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
       with:
-        name: release-artifacts-${{ matrix.config.name }}
-        path: fonts/archive/*
+        name: fonts-${{ matrix.config.name }}
+        path: out/**/*.ttf
 
   create-release:
     needs: build
@@ -47,12 +63,21 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-    - uses: actions/download-artifact@v4
-      with:
-        pattern: release-artifacts*
-        path: release
 
-    - name: Release artifacts
-      run: python task.py publish
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: fonts-*
+        path: all-fonts
+        merge-multiple: true
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: all-fonts/**/*.ttf
+        draft: false
+        prerelease: false
+        generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
